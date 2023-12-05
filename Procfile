@@ -1,0 +1,1 @@
+web: gunicorn ProgressiveFitness.wsgi --log-file -
