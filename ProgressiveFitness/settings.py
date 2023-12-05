@@ -28,7 +28,8 @@ DEBUG = False
 ALLOWED_HOSTS = ['progressive-fitness-e23f6b52f26a.herokuapp.com', '127.0.0.1']
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Example: Your frontend app's address
+    "http://localhost:3000",
+    'pro-fit-rust.vercel.app',  
 ]
 
 # Optional: Allow credentials (cookies, authentication headers, etc.)
