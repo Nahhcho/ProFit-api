@@ -8,7 +8,7 @@ class User(AbstractUser):
 
 class Workout(models.Model):
     title = models.TextField(max_length=20)
-    exercies = models.ManyToManyField('Exercise', symmetrical=False, blank=True, default=None, null=True)
+    exercises = models.ManyToManyField('Exercise', symmetrical=False, blank=True, default=None, null=True)
 
     def __str__(self):
         return f"{self.title}"
@@ -16,6 +16,9 @@ class Workout(models.Model):
 class Exercise(models.Model):
     title = models.TextField(max_length=10)
     sets = models.ManyToManyField('Set', symmetrical=False, blank=True, default=None, null=True)
+
+    def __str__(self):
+        return f"{self.title}"
 
 class Set(models.Model):
     reps = models.IntegerField()

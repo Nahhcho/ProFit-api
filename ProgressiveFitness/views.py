@@ -9,6 +9,7 @@ from .serializers import UserSerializer
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 @api_view(['GET', 'PUT'])
 def user_detail(request, id):
@@ -29,18 +30,21 @@ def user_detail(request, id):
                 newSet = Set(reps=set)
                 newSet.save()
                 newExercise.sets.add(newSet)
-            workout.exercies.add(newExercise)
+            workout.exercises.add(newExercise)
         user.workouts.add(workout)
         user.save()
-        return Response({'message' : 'workouts added successfully! '})
+
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['user'] = UserSerializer(user).data
+
+        return Response({'access': str(access_token), 'refresh': str(refresh)})
     
 @api_view(['POST'])
 def login(request):
     data = json.loads(request.body.decode('utf-8'))
     username = data.get("username")
     password = data.get("password")
-    print(username)
-    print(password)
     user = authenticate(request, username=username, password=password)
 
     if user is not None:
@@ -61,10 +65,14 @@ def register(request):
 
         # Attempt to create new user
         try:
-            user = User.objects.create_user(username=username, password=password, first_name = name, email = email)
+            user = User.objects.create_user(username=username, password=password, first_name=name, email=email)
             user.save()
-            serialized_user = UserSerializer(user)
-            return JsonResponse({'message': 'user created!', 'user': serialized_user.data}, status=201)
+
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
+
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
         except IntegrityError as e:
             print(e)
             return JsonResponse({'error': 'username already exists'})

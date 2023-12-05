@@ -132,13 +132,15 @@ WSGI_APPLICATION = "ProgressiveFitness.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ProgressiveFitness_db',
-        'USER': 'postgres',
-        'PASSWORD': 'Jc202024',
-        'HOST': 'localhost',  # Set to the host where your PostgreSQL server is running
+        'NAME': 'ProgressiveFitness-db',
+        'USER': 'JimmyB12',
+        'PASSWORD': os.getenv('aws_db_pass'),
+        'HOST': 'database-2.conywzscu1nd.us-east-2.rds.amazonaws.com',  # Set to the host where your PostgreSQL server is running
         'PORT': '5432',      # Set to the port used by your PostgreSQL server
     }
 }
