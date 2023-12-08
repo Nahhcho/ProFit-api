@@ -28,7 +28,6 @@ def user_detail(request, id):
             newExercise.save()
             for set in exercise['sets']:
                 newSet = Set(reps=set)
-                newSet.user.add(user)
                 newSet.save()
                 newExercise.sets.add(newSet)
             workout.exercises.add(newExercise)
