@@ -24,3 +24,6 @@ class Set(models.Model):
     reps = models.IntegerField()
     weight = models.IntegerField(blank=True, default=None, null=True)
 
+    def __str__(self):
+        return f"{self.reps} x {self.weight}"
+
