@@ -28,6 +28,7 @@ def user_detail(request, id):
             newExercise.save()
             for set in exercise['sets']:
                 newSet = Set(reps=set)
+                newSet.user.add(user)
                 newSet.save()
                 newExercise.sets.add(newSet)
             workout.exercises.add(newExercise)
@@ -39,6 +40,19 @@ def user_detail(request, id):
         access_token['user'] = UserSerializer(user).data
 
         return Response({'access': str(access_token), 'refresh': str(refresh)})
+    
+@api_view(['PUT'])
+def set_detail(request, id):
+    if request.method == 'PUT':
+        weight = request.data.get('weight')
+        user = User(pk=request.data.get('userId'))
+        set_obj = Set(pk=id)
+        set_obj.weight = weight
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['user'] = UserSerializer(user).data
+        return Response({'access': str(access_token), 'refresh': str(refresh)})
+
     
 @api_view(['POST'])
 def login(request):
