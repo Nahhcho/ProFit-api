@@ -47,6 +47,7 @@ def set_detail(request, id):
         user = User(pk=request.data.get('userId'))
         set_obj = Set(pk=id)
         set_obj.weight = weight
+        set_obj.save()
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
         access_token['user'] = UserSerializer(user).data
