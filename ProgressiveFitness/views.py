@@ -43,10 +43,10 @@ def user_detail(request, id):
 @api_view(['PUT'])
 def set_detail(request, id):
     if request.method == 'PUT':
-        weight = request.data.get('weight')
         user = User(pk=request.data.get('userId'))
         set_obj = Set(pk=id)
-        set_obj.weight = weight
+        set_obj.reps = request.data.get('reps')
+        set_obj.weight = request.data.get('weight')
         set_obj.save()
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
