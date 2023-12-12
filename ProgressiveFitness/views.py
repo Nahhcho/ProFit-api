@@ -55,7 +55,7 @@ def set_detail(request, id):
         access_token['user'] = UserSerializer(user).data
         return Response({'access': str(access_token), 'refresh': str(refresh)})
     
-@api_view(['PUT'])
+@api_view(['PUT', 'DELETE'])
 def workout_detail(request, id):
     if request.method == 'PUT':
         workout = Workout.objects.get(pk=id)
@@ -93,10 +93,27 @@ def workout_detail(request, id):
         access_token['user'] = UserSerializer(user).data
 
         return Response({'access': str(access_token), 'refresh': str(refresh)})
-        
-        
+    
+    elif request.method == 'DELETE':
+        workout = Workout.objects.get(pk=id)
+        workout.title = request.data.get('title')
+        user = User.objects.get(pk=request.data.get('userId'))
 
+        exercises = workout.exercises.all()
 
+        for exercise in exercises:
+            sets = exercise.sets.all()
+            sets.delete()
+            exercise.delete()
+
+        workout.delete()
+        user.save()
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['user'] = UserSerializer(user).data
+
+        return Response({'access': str(access_token), 'refresh': str(refresh)})
+    
     
 @api_view(['POST'])
 def login(request):
