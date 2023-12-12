@@ -108,8 +108,10 @@ def login(request):
     if user is not None:
         serialized_user = UserSerializer(user)
         return JsonResponse({'message': 'successful login!', 'user': serialized_user.data}, status=200)
+    elif User.objects.get(username=username) == None:
+        return JsonResponse({"message": 'Username does not exist!'}, status=401)
     else:
-         return JsonResponse({"message": 'invalid credentials'}, status=401)
+         return JsonResponse({"message": 'invalid credentials!'}, status=401)
     
 @api_view(['POST'])
 def register(request):
@@ -118,8 +120,14 @@ def register(request):
         data = json.loads(request.body.decode('utf-8'))
         username = data.get("username")
         password = data.get("password")
+        cpassword = data.get("cpassword")
         email = data.get("email")
         name = data.get("name")
+
+        if cpassword != password:
+            return Response({'message': 'Passwords do not match!'})
+        if password is '' or email is '' or name is '' or username is '':
+            return Response({'message': 'Fields cannot be empty!'})
 
         # Attempt to create new user
         try:
@@ -130,10 +138,10 @@ def register(request):
             access_token = refresh.access_token
             access_token['user'] = UserSerializer(user).data
 
-            return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'message': 'success', 'access': str(access_token), 'refresh': str(refresh)})
         except IntegrityError as e:
             print(e)
-            return JsonResponse({'error': 'username already exists'})
+            return JsonResponse({'message': 'Username already exists!'})
     
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
