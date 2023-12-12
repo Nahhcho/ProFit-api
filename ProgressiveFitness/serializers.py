@@ -4,14 +4,14 @@ from .models import User, Workout, Exercise, Set
 class SetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Set
-        fields = ['id', 'reps', 'weight']
+        fields = ['id', 'reps', 'weight', 'set_num']
     
 class ExercisesSerializer(serializers.ModelSerializer):
     sets = SetSerializer(many=True)
 
     class Meta:
         model = Exercise
-        fields = ['id', 'title', 'sets']
+        fields = ['id', 'title', 'sets', 'exercise_num']
 
 class WorkoutSerializer(serializers.ModelSerializer):
     exercises = ExercisesSerializer(many=True)

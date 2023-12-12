@@ -14,16 +14,18 @@ class Workout(models.Model):
         return f"{self.title}"
 
 class Exercise(models.Model):
+    exercise_num = models.IntegerField()
     title = models.TextField(max_length=10)
     sets = models.ManyToManyField('Set', symmetrical=False, blank=True, default=None, null=True)
 
     def __str__(self):
-        return f"{self.title}"
+        return f"Exercise {self.exercise_num}: {self.title}"
 
 class Set(models.Model):
+    set_num = models.IntegerField()
     reps = models.IntegerField()
-    weight = models.IntegerField(blank=True, default=None, null=True)
+    weight = models.IntegerField(blank=True, default=0)
 
     def __str__(self):
-        return f"{self.reps} x {self.weight}"
+        return f"Set {self.set_num}: {self.reps} x {self.weight}"
 
