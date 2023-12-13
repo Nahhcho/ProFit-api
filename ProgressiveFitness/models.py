@@ -22,7 +22,7 @@ class Exercise(models.Model):
         return f"Exercise {self.exercise_num}: {self.title}"
 
 class Set(models.Model):
-    set_num = models.DecimalField(max_digits=20, decimal_places=2)
+    set_num = models.IntegerField()
     reps = models.IntegerField()
     weight = models.DecimalField(max_digits=20, decimal_places=2, blank=True, default=0)
 
