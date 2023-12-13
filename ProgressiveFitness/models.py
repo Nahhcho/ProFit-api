@@ -3,7 +3,7 @@ from django.db import models
 
 class User(AbstractUser):
     workouts = models.ManyToManyField('Workout', symmetrical=False, blank=True, default=None, null=True)
-    weight = models.IntegerField(blank=True, null=True)
+    weight = models.DecimalField(max_digits=20, decimal_places=2, blank=True, null=True)
     age = models.IntegerField(blank=True, null=True)
 
 class Workout(models.Model):
@@ -22,9 +22,9 @@ class Exercise(models.Model):
         return f"Exercise {self.exercise_num}: {self.title}"
 
 class Set(models.Model):
-    set_num = models.IntegerField()
+    set_num = models.DecimalField(max_digits=20, decimal_places=2)
     reps = models.IntegerField()
-    weight = models.IntegerField(blank=True, default=0)
+    weight = models.DecimalField(max_digits=20, decimal_places=2, blank=True, default=0)
 
     def __str__(self):
         return f"Set {self.set_num}: {self.reps} x {self.weight}"

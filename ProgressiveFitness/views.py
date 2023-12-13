@@ -47,6 +47,7 @@ def set_detail(request, id):
     if request.method == 'PUT':
         user = User.objects.get(pk=request.data.get('userId'))
         set_obj = Set.objects.get(pk=id)
+        print(request.data.get('reps'))
         set_obj.reps = request.data.get('reps')
         set_obj.weight = request.data.get('weight')
         set_obj.save()
