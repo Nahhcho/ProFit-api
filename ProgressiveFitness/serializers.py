@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Workout, Exercise, Set
+from .models import User, Workout, Exercise, Set, Split
 
 class SetSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,12 +18,21 @@ class WorkoutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Workout
-        fields = ['id', 'title', 'exercises']
+        fields = ['id', 'title', 'exercises', 'volume', 'completed_date', 'projected_day']
+
+class SplitSerializer(serializers.ModelSerializer):
+    schedule = serializers.DictField()
+
+    class Meta:
+        model = Split
+        fields = ['id', 'title', 'schedule']
 
 class UserSerializer(serializers.ModelSerializer):
     workouts = WorkoutSerializer(many=True)
+    splits = SplitSerializer(many=True)
+    current_split = SplitSerializer()
 
     class Meta:
         model = User
-        fields = ['id', 'weight', 'age', 'workouts', 'username']
+        fields = ['id', 'weight', 'age', 'workouts', 'username', 'first_name', 'splits', 'current_split']
     

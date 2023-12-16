@@ -4,12 +4,13 @@ import json
 from django.http import JsonResponse
 from django.db import IntegrityError
 from django.contrib.auth import authenticate, login, logout
-from .models import User, Exercise, Set, Workout
-from .serializers import UserSerializer
+from .models import User, Exercise, Set, Workout, Split
+from .serializers import UserSerializer, WorkoutSerializer
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+import datetime
 
 @api_view(['GET', 'PUT'])
 def user_detail(request, id):
@@ -108,6 +109,83 @@ def workout_detail(request, id):
             exercise.delete()
 
         workout.delete()
+        user.save()
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['user'] = UserSerializer(user).data
+
+        return Response({'access': str(access_token), 'refresh': str(refresh)})
+    
+@api_view(['PUT'])
+def set_split(request, id):
+    if request.method == 'PUT':
+        user = User.objects.get(pk=id)
+        split = user.splits.get(pk=request.data.get('splitId'))
+        user.current_split = split
+
+        user.save()
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['user'] = UserSerializer(user).data
+
+        return Response({'access': str(access_token), 'refresh': str(refresh)})
+    
+@api_view(['POST'])
+def create_split(request):
+    if request.method == 'POST':
+        split = Split(title=request.data.get('title'))
+        user = User.objects.get(pk=request.data.get('userId'))
+        day_splits = request.data.get('split')
+
+        print(day_splits)
+        for key in day_splits:
+            print(key)
+            print(day_splits[key])
+            if day_splits[key] is None:
+                split.schedule[key] = None
+            else:
+                split.schedule[key] = WorkoutSerializer(Workout.objects.get(pk=day_splits[key])).data
+
+        split.save()
+        user.splits.add(split)
+        print(split)
+
+        user.save()
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['user'] = UserSerializer(user).data
+
+        return Response({'access': str(access_token), 'refresh': str(refresh)})
+
+@api_view(['PUT'])
+def complete_workout(request, id):
+    if request.method == 'PUT':
+        total_volume = 0
+        user = User.objects.get(pk=request.data.get('userId'))
+        workout = Workout.objects.get(pk=id)
+        completed_workout = Workout(title=workout.title, completed_date=datetime.date.today())
+        print(datetime.date.today())
+        completed_workout.save()
+        
+        for exercise in workout.exercises.all():
+            completed_exercise = Exercise(title=exercise.title, exercise_num=exercise.exercise_num)
+            completed_exercise.save()
+            exercise_volume = 1
+            for set in exercise.sets.all():
+                exercise_volume *= set.reps * set.weight
+                completed_set = Set(set_num=set.set_num, reps=set.reps, weight=set.weight)
+                completed_set.save()
+                completed_exercise.sets.add(completed_set)
+            total_volume += exercise_volume
+            completed_workout.exercises.add(completed_exercise)
+        completed_workout.volume = total_volume
+        completed_workout.save()
+        print(completed_workout.volume)
+        if workout.volume is None or total_volume > workout.volume:
+            workout.volume = total_volume
+            workout.save()
+        user.workouts.add(completed_workout)
+
         user.save()
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
