@@ -20,7 +20,7 @@ class Workout(models.Model):
     volume = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.title}"
+        return f"{self.title} ({self.id})"
 
 class Exercise(models.Model):
     exercise_num = models.IntegerField()

@@ -15,183 +15,223 @@ import datetime
 @api_view(['GET', 'PUT'])
 def user_detail(request, id):
     if request.method == 'GET':
-        user = User.objects.get(pk=id)
-        serialized_user = UserSerializer(user)
-        return JsonResponse(serialized_user.data)
+        try:
+            user = User.objects.get(pk=id)
+            serialized_user = UserSerializer(user)
+            return JsonResponse(serialized_user.data)
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     elif request.method == 'PUT':
-        user = User.objects.get(pk=id)
-        workout = Workout(title=request.data.get('title'))
-        workout.save()
-        exercises = request.data.get('exercises')
+        try:
+            user = User.objects.get(pk=id)
+            workout = Workout(title=request.data.get('title'))
+            workout.save()
+            exercises = request.data.get('exercises')
 
-        for exercise in exercises:
-            newExercise = Exercise(title=exercise['title'], exercise_num=exercise['exercise_num'])
-            newExercise.save()
-            for set in exercise['sets']:
-                newSet = Set(reps=set['reps'], set_num=set['set_num'])
-                newSet.save()
-                print(newSet)
-                newExercise.sets.add(newSet)
-            print(newExercise)
-            workout.exercises.add(newExercise)
-        user.workouts.add(workout)
-        user.save()
+            for exercise in exercises:
+                newExercise = Exercise(title=exercise['title'], exercise_num=exercise['exercise_num'])
+                newExercise.save()
+                for set in exercise['sets']:
+                    newSet = Set(reps=set['reps'], set_num=set['set_num'])
+                    newSet.save()
+                    print(newSet)
+                    newExercise.sets.add(newSet)
+                print(newExercise)
+                workout.exercises.add(newExercise)
+            user.workouts.add(workout)
+            user.save()
 
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
 
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     
 @api_view(['PUT'])
 def set_detail(request, id):
     if request.method == 'PUT':
-        user = User.objects.get(pk=request.data.get('userId'))
-        set_obj = Set.objects.get(pk=id)
-        print(request.data.get('reps'))
-        set_obj.reps = request.data.get('reps')
-        set_obj.weight = request.data.get('weight')
-        set_obj.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+        try:
+            user = User.objects.get(pk=request.data.get('userId'))
+            set_obj = Set.objects.get(pk=id)
+            print(request.data.get('reps'))
+            set_obj.reps = request.data.get('reps')
+            set_obj.weight = request.data.get('weight')
+            set_obj.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     
 @api_view(['PUT', 'DELETE'])
 def workout_detail(request, id):
     if request.method == 'PUT':
-        workout = Workout.objects.get(pk=id)
-        workout.title = request.data.get('title')
-        user = User.objects.get(pk=request.data.get('userId'))
+        try: 
+            workout = Workout.objects.get(pk=id)
+            workout.title = request.data.get('title')
+            user = User.objects.get(pk=request.data.get('userId'))
 
-        exercises = workout.exercises.all()
+            exercises = workout.exercises.all()
 
-        for exercise in exercises:
-            sets = exercise.sets.all()
-            sets.delete()
-            exercise.delete()
+            for exercise in exercises:
+                sets = exercise.sets.all()
+                sets.delete()
+                exercise.delete()
 
-        exercises = request.data.get('exercises')
+            exercises = request.data.get('exercises')
 
-        exercise_count = 1
-        for exercise in exercises:
-            newExercise = Exercise(title=exercise['title'], exercise_num=exercise_count)
-            exercise_count += 1
-            newExercise.save()
-            set_count = 1
-            for set_data in exercise['sets']:
-                newSet = Set(reps=set_data['reps'], set_num=set_count, weight=set_data['weight'])
-                set_count += 1
-                newSet.save()
-                print(newSet)
-                newExercise.sets.add(newSet)
-            print(newExercise)
-            workout.exercises.add(newExercise)
+            exercise_count = 1
+            for exercise in exercises:
+                newExercise = Exercise(title=exercise['title'], exercise_num=exercise_count)
+                exercise_count += 1
+                newExercise.save()
+                set_count = 1
+                for set_data in exercise['sets']:
+                    newSet = Set(reps=set_data['reps'], set_num=set_count, weight=set_data['weight'])
+                    set_count += 1
+                    newSet.save()
+                    print(newSet)
+                    newExercise.sets.add(newSet)
+                print(newExercise)
+                workout.exercises.add(newExercise)
 
-        workout.save()
-        user.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
+            for split in user.splits.all():
+                schedule = split.schedule
+                for key in schedule:
+                    if schedule[key] is not None and schedule[key]['id'] is workout.id:
+                        schedule[key] = WorkoutSerializer(workout).data
+                        split.save()
+            
+            workout.save()
+            user.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
 
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     
     elif request.method == 'DELETE':
-        workout = Workout.objects.get(pk=id)
-        workout.title = request.data.get('title')
-        user = User.objects.get(pk=request.data.get('userId'))
+        try:
+            workout = Workout.objects.get(pk=id)
+            workout.title = request.data.get('title')
+            user = User.objects.get(pk=request.data.get('userId'))
 
-        exercises = workout.exercises.all()
+            exercises = workout.exercises.all()
 
-        for exercise in exercises:
-            sets = exercise.sets.all()
-            sets.delete()
-            exercise.delete()
+            for exercise in exercises:
+                sets = exercise.sets.all()
+                sets.delete()
+                exercise.delete()
 
-        workout.delete()
-        user.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
+            workout.delete()
+            user.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
 
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     
 @api_view(['PUT'])
 def set_split(request, id):
     if request.method == 'PUT':
-        user = User.objects.get(pk=id)
-        split = user.splits.get(pk=request.data.get('splitId'))
-        user.current_split = split
+        try:
+            user = User.objects.get(pk=id)
+            split = user.splits.get(pk=request.data.get('splitId'))
+            user.current_split = split
 
-        user.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
+            user.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
 
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     
 @api_view(['POST'])
 def create_split(request):
     if request.method == 'POST':
-        split = Split(title=request.data.get('title'))
-        user = User.objects.get(pk=request.data.get('userId'))
-        day_splits = request.data.get('split')
+        try:
+            split = Split(title=request.data.get('title'))
+            user = User.objects.get(pk=request.data.get('userId'))
+            day_splits = request.data.get('split')
 
-        print(day_splits)
-        for key in day_splits:
-            print(key)
-            print(day_splits[key])
-            if day_splits[key] is None:
-                split.schedule[key] = None
-            else:
-                split.schedule[key] = WorkoutSerializer(Workout.objects.get(pk=day_splits[key])).data
+            print(day_splits)
+            for key in day_splits:
+                print(key)
+                print(day_splits[key])
+                if day_splits[key] is None:
+                    split.schedule[key] = None
+                else:
+                    split.schedule[key] = WorkoutSerializer(Workout.objects.get(pk=day_splits[key])).data
 
-        split.save()
-        user.splits.add(split)
-        print(split)
+            split.save()
+            user.splits.add(split)
+            print(split)
 
-        user.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
+            user.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
 
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
+
 
 @api_view(['PUT'])
 def complete_workout(request, id):
     if request.method == 'PUT':
-        total_volume = 0
-        user = User.objects.get(pk=request.data.get('userId'))
-        workout = Workout.objects.get(pk=id)
-        completed_workout = Workout(title=workout.title, completed_date=datetime.date.today())
-        print(datetime.date.today())
-        completed_workout.save()
-        
-        for exercise in workout.exercises.all():
-            completed_exercise = Exercise(title=exercise.title, exercise_num=exercise.exercise_num)
-            completed_exercise.save()
-            exercise_volume = 1
-            for set in exercise.sets.all():
-                exercise_volume *= set.reps * set.weight
-                completed_set = Set(set_num=set.set_num, reps=set.reps, weight=set.weight)
-                completed_set.save()
-                completed_exercise.sets.add(completed_set)
-            total_volume += exercise_volume
-            completed_workout.exercises.add(completed_exercise)
-        completed_workout.volume = total_volume
-        completed_workout.save()
-        print(completed_workout.volume)
-        if workout.volume is None or total_volume > workout.volume:
-            workout.volume = total_volume
-            workout.save()
-        user.workouts.add(completed_workout)
+        try: 
+            total_volume = 0
+            user = User.objects.get(pk=request.data.get('userId'))
+            workout = Workout.objects.get(pk=id)
+            completed_workout = Workout(title=workout.title, completed_date=datetime.date.today())
+            print(datetime.date.today())
+            completed_workout.save()
+            
+            for exercise in workout.exercises.all():
+                completed_exercise = Exercise(title=exercise.title, exercise_num=exercise.exercise_num)
+                completed_exercise.save()
+                exercise_volume = 1
+                for set in exercise.sets.all():
+                    exercise_volume += set.reps * set.weight
+                    completed_set = Set(set_num=set.set_num, reps=set.reps, weight=set.weight)
+                    completed_set.save()
+                    completed_exercise.sets.add(completed_set)
+                total_volume += exercise_volume
+                completed_workout.exercises.add(completed_exercise)
+            completed_workout.volume = total_volume
+            completed_workout.save()
+            print(completed_workout.volume)
+            if workout.volume is None or total_volume > workout.volume:
+                workout.volume = total_volume
+                workout.save()
+            user.workouts.add(completed_workout)
 
-        user.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-        access_token['user'] = UserSerializer(user).data
+            user.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
 
-        return Response({'access': str(access_token), 'refresh': str(refresh)})
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'})
     
     
 @api_view(['POST'])
@@ -211,8 +251,6 @@ def login(request):
     
 @api_view(['POST'])
 def register(request):
-
-        # Ensure password matches confirmation
         data = json.loads(request.body.decode('utf-8'))
         username = data.get("username")
         password = data.get("password")
@@ -225,7 +263,6 @@ def register(request):
         if password is '' or email is '' or name is '' or username is '':
             return Response({'message': 'Fields cannot be empty!'})
 
-        # Attempt to create new user
         try:
             user = User.objects.create_user(username=username, password=password, first_name=name, email=email)
             user.save()
@@ -244,9 +281,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
-        # Add custom claims
         token['user'] = UserSerializer(user).data
-        # ...
 
         return token
     
