@@ -32,6 +32,7 @@ urlpatterns = [
     path('register', views.register),
     path('complete_workout/<int:id>', views.complete_workout),
     path('set_split/<int:id>', views.set_split),
+    path('split_detail/<int:id>', views.split_detail),
     path('login', views.login),
 
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

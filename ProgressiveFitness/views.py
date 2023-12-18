@@ -160,6 +160,49 @@ def set_split(request, id):
         except IntegrityError as e:
             print(e)
             return Response({'message': 'internal server error'})
+        
+@api_view(['PUT', 'DELETE'])
+def split_detail(request, id):
+    if request.method == 'PUT':
+        try:
+            user = User.objects.get(pk=request.data.get('userId'))
+            split = Split.objects.get(pk=id)
+
+            split.title = request.data.get('title')
+            day_split = request.data.get('schedule')
+
+            for key in day_split:
+                print(key)
+                print(day_split[key])
+                if day_split[key] is None:
+                    split.schedule[key] = None
+                else:
+                    split.schedule[key] = WorkoutSerializer(Workout.objects.get(pk=day_split[key])).data
+            
+            split.save()
+            user.save()
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
+
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'}, status=500)
+    elif request.method == 'DELETE':
+        try:
+            user = User.objects.get(pk=request.data.get('userId'))
+            split = Split.objects.get(pk=id)
+            split.delete()
+
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            access_token['user'] = UserSerializer(user).data
+
+            return Response({'access': str(access_token), 'refresh': str(refresh)})
+        except IntegrityError as e:
+            print(e)
+            return Response({'message': 'internal server error'}, status=500)
     
 @api_view(['POST'])
 def create_split(request):

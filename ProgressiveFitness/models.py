@@ -4,7 +4,7 @@ from django.db import models
 class User(AbstractUser):
     workouts = models.ManyToManyField('Workout', symmetrical=False, blank=True, default=None, null=True)
     weight = models.DecimalField(max_digits=20, decimal_places=2, blank=True, null=True)
-    current_split = models.ForeignKey('Split', blank=True, null=True, on_delete=models.CASCADE, related_name='User')
+    current_split = models.ForeignKey('Split', blank=True, null=True, on_delete=models.SET_NULL, related_name='User')
     splits = models.ManyToManyField('Split', symmetrical=False, blank=True, null=True, default=None)
     age = models.IntegerField(blank=True, null=True)
 
