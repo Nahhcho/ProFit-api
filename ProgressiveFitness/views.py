@@ -290,7 +290,7 @@ def complete_workout(request, id):
                 for split in user.splits.all():
                     schedule = split.schedule
                     for key in schedule:
-                        if schedule[key] is not None and schedule[key]['id'] is workout.id:
+                        if schedule[key] is not None and schedule[key]['id'] == workout.id:
                             schedule[key] = WorkoutSerializer(workout).data
                             split.save()
             
