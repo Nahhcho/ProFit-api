@@ -7,6 +7,7 @@ class User(AbstractUser):
     current_split = models.ForeignKey('Split', blank=True, null=True, on_delete=models.SET_NULL, related_name='User')
     splits = models.ManyToManyField('Split', symmetrical=False, blank=True, null=True, default=None)
     age = models.IntegerField(blank=True, null=True)
+    bench = models.IntegerField(blank=True, null=True)
 
 class Split(models.Model):
     title = models.TextField(max_length=50)
@@ -17,7 +18,7 @@ class Workout(models.Model):
     exercises = models.ManyToManyField('Exercise', symmetrical=False, blank=True, default=None, null=True)
     completed_date = models.DateField(blank=True, null=True)
     projected_day = models.TextField(max_length=1, blank=True, null=True)
-    volume = models.IntegerField(blank=True, null=True)
+    volume = models.DecimalField(blank=True, null=True, max_digits=20, decimal_places=2)
 
     def __str__(self):
         return f"{self.title} ({self.id})"
