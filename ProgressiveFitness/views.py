@@ -122,11 +122,8 @@ def workout_detail(request, id):
     
     elif request.method == 'DELETE':
         try:
-            print(id)
             workout = Workout.objects.get(pk=id)
-            print(workout)
             user = User.objects.get(pk=request.data.get('userId'))
-            print(user)
 
             exercises = workout.exercises.all()
 
@@ -134,7 +131,6 @@ def workout_detail(request, id):
                 sets = exercise.sets.all()
                 sets.delete()
                 exercise.delete()
-
             
             for split in user.splits.all():
                 if split != None:
@@ -288,7 +284,7 @@ def complete_workout(request, id):
             completed_workout.save()
             print(completed_workout.volume)
 
-            if workout.volume is None or total_volume > workout.volume:
+            if workout.volume is None or total_volume >= workout.volume:
                 workout.volume = total_volume
                 workout.save()
                 for split in user.splits.all():
@@ -316,7 +312,7 @@ def log_workout(request, id):
         try: 
             total_volume = 0
             user = User.objects.get(pk=request.data.get('userId'))
-            workout = Workout.objects.get(pk=id)
+            core_workout = Workout.objects.get(pk=id)
             date = request.data.get('completed_date')
 
             try:
@@ -332,13 +328,13 @@ def log_workout(request, id):
             except Workout.DoesNotExist:
                 pass
 
-            completed_workout = Workout(title=workout.title, completed_date=date)
+            completed_workout = Workout(title=core_workout.title, completed_date=date)
             completed_workout.save()
 
             log_exercises = request.data.get('exercises')
-            print(log_exercises)
+
             
-            for exercise in workout.exercises.all():
+            for exercise in core_workout.exercises.all():
                 completed_exercise = Exercise(title=exercise.title, exercise_num=exercise.exercise_num)
                 completed_exercise.save()
                 exercise_volume = 1
@@ -354,14 +350,17 @@ def log_workout(request, id):
             completed_workout.volume = total_volume
             completed_workout.save()
 
-            if workout.volume is None or total_volume > workout.volume:
-                workout.volume = total_volume
-                workout.save()
+            print(core_workout.volume)
+            print(total_volume)
+
+            if core_workout.volume is None or total_volume >= core_workout.volume:
+                core_workout.volume = total_volume
+                core_workout.save()
                 for split in user.splits.all():
                     schedule = split.schedule
                     for key in schedule:
-                        if schedule[key] is not None and schedule[key]['id'] is workout.id:
-                            schedule[key] = WorkoutSerializer(workout).data
+                        if schedule[key] is not None and schedule[key]['id'] == core_workout.id:
+                            schedule[key] = WorkoutSerializer(core_workout).data
                             split.save()
 
             user.workouts.add(completed_workout)
