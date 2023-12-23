@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import openai
 
 class User(AbstractUser):
     workouts = models.ManyToManyField('Workout', symmetrical=False, blank=True, default=None, null=True)
@@ -8,6 +9,7 @@ class User(AbstractUser):
     splits = models.ManyToManyField('Split', symmetrical=False, blank=True, null=True, default=None)
     age = models.IntegerField(blank=True, null=True)
     bench = models.IntegerField(blank=True, null=True)
+    thread_id = models.TextField(max_length=100, blank=True, null=True, default=None)
 
 class Split(models.Model):
     title = models.TextField(max_length=50)

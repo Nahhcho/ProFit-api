@@ -34,6 +34,7 @@ urlpatterns = [
     path('set_split/<int:id>', views.set_split),
     path('split_detail/<int:id>', views.split_detail),
     path('log_workout/<int:id>', views.log_workout),
+    path('ask_derek/<int:id>', views.ask_derek),
     path('login', views.login),
 
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

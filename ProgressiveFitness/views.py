@@ -11,7 +11,44 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
-import datetime
+import openai
+
+openai.api_key = "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"
+
+@api_view(['POST'])
+def ask_derek(request, id):
+    if request.method == 'POST':
+        user = User.objects.get(pk=id)
+        if user.thread_id == None or user.thread_id == '':
+            thread = openai.beta.threads.create()
+            user.thread_id = thread.id
+            user.save()
+        else:
+            thread = openai.beta.threads.retrieve(user.thread_id)
+
+        message = openai.beta.threads.messages.create(
+            thread_id = thread.id,
+            role = "user",
+            content = request.data.get('message')
+        )
+
+        run = openai.beta.threads.runs.create(
+            thread_id = thread.id,
+            assistant_id = 'asst_ZDhpue3xRwELAl4jlVG6LvdT',
+            instructions = f"You are a personal trainer ai named Derek who focuses on the scientific litererature of fitness to deliver expert advice. You keep your answers short and concise.Please address the user as {user.first_name}."
+        )
+
+        while run.status != "completed":
+            run = openai.beta.threads.runs.retrieve(
+                thread_id = thread.id,
+                run_id = run.id
+            )
+
+        messages = openai.beta.threads.messages.list(
+            thread_id = thread.id
+        )
+
+        return Response({'response': messages.data[0].content[0].text.value})
 
 @api_view(['GET', 'PUT'])
 def user_detail(request, id):
