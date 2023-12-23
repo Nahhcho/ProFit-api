@@ -15,40 +15,64 @@ import openai
 
 openai.api_key = "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"
 
+from rest_framework import status
+from rest_framework.response import Response
+
+# ... (other imports and code)
+
 @api_view(['POST'])
 def ask_derek(request, id):
-    if request.method == 'POST':
-        user = User.objects.get(pk=id)
-        if user.thread_id == None or user.thread_id == '':
-            thread = openai.beta.threads.create()
-            user.thread_id = thread.id
-            user.save()
-        else:
-            thread = openai.beta.threads.retrieve(user.thread_id)
+    try:
+        if request.method == 'POST':
+            user = User.objects.get(pk=id)
+            message_content = request.data.get('message')
 
-        message = openai.beta.threads.messages.create(
-            thread_id = thread.id,
-            role = "user",
-            content = request.data.get('message')
-        )
+            if not message_content:
+                return Response({'error': 'Message content is empty'}, status=status.HTTP_400_BAD_REQUEST)
 
-        run = openai.beta.threads.runs.create(
-            thread_id = thread.id,
-            assistant_id = 'asst_ZDhpue3xRwELAl4jlVG6LvdT',
-            instructions = f"You are a personal trainer ai named Derek who focuses on the scientific litererature of fitness to deliver expert advice. You keep your answers short and concise.Please address the user as {user.first_name}."
-        )
+            if user.thread_id is None or user.thread_id == '':
+                thread = openai.beta.threads.create()
+                user.thread_id = thread.id
+                user.save()
+            else:
+                thread = openai.beta.threads.retrieve(user.thread_id)
 
-        while run.status != "completed":
-            run = openai.beta.threads.runs.retrieve(
-                thread_id = thread.id,
-                run_id = run.id
+            message = openai.beta.threads.messages.create(
+                thread_id=thread.id,
+                role="user",
+                content=message_content
             )
 
-        messages = openai.beta.threads.messages.list(
-            thread_id = thread.id
-        )
+            run = openai.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id='asst_ZDhpue3xRwELAl4jlVG6LvdT',
+                instructions=f"You are a personal trainer AI named Derek who focuses on the scientific literature of fitness to deliver expert advice. You keep your answers short and concise. Please address the user as {user.first_name}."
+            )
 
-        return Response({'response': messages.data[0].content[0].text.value})
+            while run.status != "completed":
+                run = openai.beta.threads.runs.retrieve(
+                    thread_id = thread.id,
+                    run_id = run.id
+                )
+
+            if run.status != "completed":
+                return Response({'error': 'Timeout occurred or run did not complete'}, status=status.HTTP_504_GATEWAY_TIMEOUT)
+
+            messages = openai.beta.threads.messages.list(
+                thread_id=thread.id
+            )
+
+            if messages.data:
+                response_text = messages.data[0].content[0].text.value
+                return Response({'response': response_text}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'No response received from AI'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    except User.DoesNotExist:
+        return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['GET', 'PUT'])
 def user_detail(request, id):
