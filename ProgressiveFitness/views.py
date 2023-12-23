@@ -11,9 +11,10 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
+import os
 import openai
 
-openai.api_key = "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"
+openai.api_key = os.getenv('OPEN_AI_KEY')
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -24,6 +25,7 @@ from rest_framework.response import Response
 def ask_derek(request, id):
     try:
         if request.method == 'POST':
+            print(os.getenv('OPEN_AI_KEY'))
             user = User.objects.get(pk=id)
             message_content = request.data.get('message')
 
