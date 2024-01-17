@@ -13,10 +13,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework import status
 from rest_framework.response import Response
-
+import os
 import openai
 
-openai.api_key = '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'
+openai.api_key = os.getenv('OPEN_AI_KEY')
 
 def workout_details(title, exercises):
     output = f"{title}: \n"
