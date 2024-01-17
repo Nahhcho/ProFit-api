@@ -11,23 +11,42 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
-import os
-import openai
-
-openai.api_key = os.getenv('OPEN_AI_KEY')
-
 from rest_framework import status
 from rest_framework.response import Response
 
-# ... (other imports and code)
+import openai
+
+openai.api_key = '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'
+
+def workout_details(title, exercises):
+    output = f"{title}: \n"
+    for exercise in exercises:
+        output += f"{exercise['exercise_title']}: \n"
+        set_count = 1
+        for set in exercise['sets']:
+            output += f"set {set_count}: {set['reps']} reps \n"
+            set_count += 1
+    return output
+
+def get_outputs_for_tool_call(tool_call):
+    workout_title = json.loads(tool_call.function.arguments)['workout_title']
+    exercises = json.loads(tool_call.function.arguments)['exercises']
+    print({'title': workout_title, 'exercises': exercises})
+    return {
+        'tool_call_id': tool_call.id,
+        'output': workout_details(workout_title, exercises)
+    }
 
 @api_view(['POST'])
 def ask_derek(request, id):
     try:
         if request.method == 'POST':
-            print(os.getenv('OPEN_AI_KEY'))
+            example_workout = ''
             user = User.objects.get(pk=id)
             message_content = request.data.get('message')
+            assistant = openai.beta.assistants.retrieve(
+                assistant_id="asst_JWj0UeJ3KCZN874racuUYnGL"
+            )
 
             if not message_content:
                 return Response({'error': 'Message content is empty'}, status=status.HTTP_400_BAD_REQUEST)
@@ -42,31 +61,52 @@ def ask_derek(request, id):
             message = openai.beta.threads.messages.create(
                 thread_id=thread.id,
                 role="user",
-                content=message_content
+                content=message_content,
             )
 
             run = openai.beta.threads.runs.create(
                 thread_id=thread.id,
-                assistant_id='asst_ZDhpue3xRwELAl4jlVG6LvdT',
-                instructions=f"You are a personal trainer AI named Derek who focuses on the scientific literature of fitness to deliver expert advice. You keep your answers short and concise. Please address the user as {user.first_name}."
+                assistant_id=assistant.id,
+                instructions=f"""You are a personal trainer AI named Derek who focuses on the 
+                scientific literature of fitness to deliver expert advice. If asked for a workout use you create_workout function."""
             )
-
+           
             while run.status != "completed":
                 run = openai.beta.threads.runs.retrieve(
                     thread_id = thread.id,
                     run_id = run.id
                 )
+                if run.required_action:
+                    break
+        
+            if run.required_action:
+                tool_calls = run.required_action.submit_tool_outputs.tool_calls
+                example_workout = json.loads(tool_calls[0].function.arguments)
+                tool_outputs = map(get_outputs_for_tool_call, tool_calls)
+                tool_outputs = list(tool_outputs)
+                print(tool_outputs)
 
-            if run.status != "completed":
-                return Response({'error': 'Timeout occurred or run did not complete'}, status=status.HTTP_504_GATEWAY_TIMEOUT)
+                run = openai.beta.threads.runs.submit_tool_outputs(
+                    thread_id=thread.id,
+                    run_id=run.id,
+                    tool_outputs=tool_outputs
+                )
+
+                while run.status != "completed":
+                    run = openai.beta.threads.runs.retrieve(
+                        thread_id = thread.id,
+                        run_id = run.id
+                    )
+                    if run.required_action:
+                        break
 
             messages = openai.beta.threads.messages.list(
-                thread_id=thread.id
-            )
+                    thread_id=thread.id
+                )     
 
             if messages.data:
                 response_text = messages.data[0].content[0].text.value
-                return Response({'response': response_text}, status=status.HTTP_200_OK)
+                return Response({'response': response_text, 'modelWorkout': example_workout}, status=status.HTTP_200_OK)
             else:
                 return Response({'error': 'No response received from AI'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
