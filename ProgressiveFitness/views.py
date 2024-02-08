@@ -13,10 +13,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework import status
 from rest_framework.response import Response
-import os
 import openai
+import os
 
-openai.api_key = os.getenv('OPEN_AI_KEY')
+openai.api_key = os.getenv('OPENAI_KEY')
 
 def workout_details(title, exercises):
     output = f"{title}: \n"
@@ -28,13 +28,62 @@ def workout_details(title, exercises):
             set_count += 1
     return output
 
-def get_outputs_for_tool_call(tool_call):
+def higher_volume_workout(title, exercises, workout_to_increase, user):
+    exercises_to_increase = workout_to_increase.exercises.all()
+    output = f"{title}: \n"
+
+    exercise_count = 0
+    for exercise_to_increase in exercises_to_increase:
+        print(exercise_to_increase)
+        exercise = exercises[exercise_count]
+        print(exercise)
+        output += f"{exercise['exercise_title']}: \n"
+        set_count = 0
+        for set_to_increase in exercise_to_increase.sets.all():
+            print(set_to_increase)
+            print(exercise[set_count]['reps'])
+            print(set_to_increase.target_reps)
+            set_to_increase.target_reps = exercise[set_count]['reps']
+            set_to_increase.target_weight = exercise[set_count]['weight']
+            set_to_increase.save()
+            output += f"set {set_count + 1}: {set['reps']} reps x {set['weight']} lbs \n"
+            set_count += 1
+        exercise_count += 1
+        exercise_to_increase.save()
+    workout_to_increase.save()
+    user.save()
+
+    for exercise in exercises:
+        output += f"{exercise['exercise_title']}: \n"
+        exercise_to_increase = exercises_to_increase[exercise_count]
+        set_count = 1
+        for set in exercise['sets']:
+            exercise_to_increase['sets'][set_count-1].target_reps = set['reps']
+            exercise_to_increase['sets'][set_count-1].target_weight = set['weight']
+            exercise_to_increase['sets'][set_count-1].save()
+            output += f"set {set_count}: {set['reps']} reps x {set['weight']} lbs \n"
+            set_count += 1
+        exercise_count += 1
+        exercise_to_increase.save()
+    workout_to_increase.save()
+    user.save()
+            
+    return output
+
+
+def get_outputs_for_tool_call(tool_call, workout_to_increase, user):
     workout_title = json.loads(tool_call.function.arguments)['workout_title']
     exercises = json.loads(tool_call.function.arguments)['exercises']
+
+    if tool_call.function.name == 'increase_volume':
+        output = higher_volume_workout(workout_title, exercises, workout_to_increase, user)
+    elif tool_call.function.name == 'create_workout':
+        output = workout_details(workout_title, exercises)
+
     print({'title': workout_title, 'exercises': exercises})
     return {
         'tool_call_id': tool_call.id,
-        'output': workout_details(workout_title, exercises)
+        'output': output
     }
 
 @api_view(['POST'])
@@ -44,6 +93,8 @@ def ask_derek(request, id):
             example_workout = ''
             user = User.objects.get(pk=id)
             message_content = request.data.get('message')
+            print(request.data.get('message'))
+            print(request.data.get('workoutId'))
             assistant = openai.beta.assistants.retrieve(
                 assistant_id="asst_JWj0UeJ3KCZN874racuUYnGL"
             )
@@ -68,7 +119,8 @@ def ask_derek(request, id):
                 thread_id=thread.id,
                 assistant_id=assistant.id,
                 instructions=f"""You are a personal trainer AI named Derek who focuses on the 
-                scientific literature of fitness to deliver expert advice. If asked for a workout use you create_workout function."""
+                scientific literature of fitness to deliver expert advice. Use your increase_volume function if given a workout in json format.
+                If asked for a workout, use your create_workout function. Please refer to the user as {user.first_name}"""
             )
            
             while run.status != "completed":
@@ -80,9 +132,12 @@ def ask_derek(request, id):
                     break
         
             if run.required_action:
+                workout_to_increase = None
+                if request.data.get('workoutId') != None:
+                    workout_to_increase = Workout.objects.get(pk=request.data.get('workoutId'))
                 tool_calls = run.required_action.submit_tool_outputs.tool_calls
                 example_workout = json.loads(tool_calls[0].function.arguments)
-                tool_outputs = map(get_outputs_for_tool_call, tool_calls)
+                tool_outputs = map(lambda tool_call: get_outputs_for_tool_call(tool_call, workout_to_increase, user), tool_calls)
                 tool_outputs = list(tool_outputs)
                 print(tool_outputs)
 
