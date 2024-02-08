@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-e=dk$+b5j0n60q5!$y#x1zgpj%@g0ha-vl4r7t9_)o9irv79sz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['progressive-fitness-e23f6b52f26a.herokuapp.com', '127.0.0.1']
+ALLOWED_HOSTS = ['progressive-fitness-e23f6b52f26a.herokuapp.com', '127.0.0.1', 'web-production-cffd.up.railway.app']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
